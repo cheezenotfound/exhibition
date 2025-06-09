@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Globes - WaterWatch</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: sans-serif;
+      background-color: black;
+      color: white;
+      height: 100%;
+    }
+
+    header {
+      background-color: #0077cc;
+      color: white;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      z-index: 1000;
+      box-sizing: border-box;
+    }
+
+    header .title {
+      font-size: 1.5em;
+      font-weight: bold;
+    }
+
+    nav a {
+      margin-left: 20px;
+      color: white;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    nav a:hover {
+      text-decoration: underline;
+    }
+
+    #sensitivity-slider {
+      position: absolute;
+      top: 70px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 8px;
+      border-radius: 8px;
+      z-index: 10;
+    }
+
+    #globe-selector {
+      position: absolute;
+      top: 70px;
+      left: 10px;
+      padding: 6px;
+      border-radius: 6px;
+      z-index: 10;
+    }
+
+    .zoom-buttons {
+      position: absolute;
+      top: 120px;
+      right: 10px;
+      display: flex;
+      flex-direction: column;
+      z-index: 10;
+    }
+
+    .zoom-buttons button {
+      margin: 4px;
+      font-size: 16px;
+      padding: 6px 10px;
+      border: none;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      cursor: pointer;
+    }
+
+    .zoom-buttons button:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    canvas {
+      display: block;
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 0;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="title">WaterWatch</div>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="globes.html">Globes</a>
+      <a href="facts.html">Facts</a>
+      <a href="credits.html">Credits</a>
+    </nav>
+  </header>
+
+  <select id="globe-selector">
+    <option value="globe1.jpg">Normal Earth</option>
+    <option value="globe2.jpg">Clean Water Access</option>
+    <option value="globe3.jpg">Ocean Hotspots</option>
+  </select>
+
+  <div id="sensitivity-slider">
+    <label for="sens">Sensitivity:</label>
+    <input type="range" id="sens" min="0.0001" max="0.01" step="0.0001" value="0.0015" />
+  </div>
+
+  <div class="zoom-buttons">
+    <button id="zoom-in">+</button>
+    <button id="zoom-out">−</button>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+    camera.position.z = 10;
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setClearColor(0x000000, 0);
+    document.body.appendChild(renderer.domElement);
+
+    const textureLoader = new THREE.TextureLoader();
+
+    // Stars
+    const starsTexture = textureLoader.load('stars.jpg');
+    const starsGeometry = new THREE.SphereGeometry(20, 64, 64);
+    const starsMaterial = new THREE.MeshBasicMaterial({ map: starsTexture, side: THREE.BackSide, depthWrite: false });
+    const starsSphere = new THREE.Mesh(starsGeometry, starsMaterial);
+    scene.add(starsSphere);
+
+    // Globe
+    const globeGeometry = new THREE.SphereGeometry(5, 64, 64);
+    const globeMaterial = new THREE.MeshBasicMaterial({ map: textureLoader.load('globes/globe1.jpg') });
+    const globe = new THREE.Mesh(globeGeometry, globeMaterial);
+    scene.add(globe);
+
+    // Sensitivity
+    let sensitivity = 0.0015;
+    document.getElementById('sens').addEventListener('input', e => {
+      sensitivity = parseFloat(e.target.value);
+    });
+
+    // Globe selector
+    document.getElementById('globe-selector').addEventListener('change', e => {
+      const newTexture = textureLoader.load('globes/' + e.target.value);
+      globeMaterial.map = newTexture;
+      globeMaterial.needsUpdate = true;
+    });
+
+    // Drag
+    let isDragging = false;
+    let prevX = 0, prevY = 0;
+    let velocityX = 0, velocityY = 0;
+    const drag = 0.95;
+
+    document.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      prevX = e.clientX;
+      prevY = e.clientY;
+    });
+    document.addEventListener('mouseup', () => isDragging = false);
+    document.addEventListener('mousemove', (e) => {
+      if (isDragging) {
+        const dx = e.clientX - prevX;
+        const dy = e.clientY - prevY;
+        velocityX = dx * sensitivity;
+        velocityY = dy * sensitivity;
+        prevX = e.clientX;
+        prevY = e.clientY;
+      }
+    });
+
+    // Touch support
+    document.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1) {
+        isDragging = true;
+        prevX = e.touches[0].clientX;
+        prevY = e.touches[0].clientY;
+      }
+    });
+    document.addEventListener('touchend', () => isDragging = false);
+    document.addEventListener('touchmove', (e) => {
+      if (isDragging && e.touches.length === 1) {
+        const dx = e.touches[0].clientX - prevX;
+        const dy = e.touches[0].clientY - prevY;
+        velocityX = dx * sensitivity;
+        velocityY = dy * sensitivity;
+        prevX = e.touches[0].clientX;
+        prevY = e.touches[0].clientY;
+      }
+    }, { passive: true });
+
+    // Zoom buttons
+    document.getElementById('zoom-in').addEventListener('click', () => {
+      camera.position.z -= 1;
+      if (camera.position.z < 6) camera.position.z = 6;
+    });
+
+    document.getElementById('zoom-out').addEventListener('click', () => {
+      camera.position.z += 1;
+      if (camera.position.z > 30) camera.position.z = 30;
+    });
+
+    // Block scroll zoom
+    document.addEventListener('wheel', e => {
+      e.preventDefault();
+    }, { passive: false });
+
+    // Animate
+    function animate() {
+      requestAnimationFrame(animate);
+      globe.rotation.y += velocityX;
+      globe.rotation.x += velocityY;
+      starsSphere.rotation.y += velocityX * 0.5;
+      starsSphere.rotation.x += velocityY * 0.5;
+      velocityX *= drag;
+      velocityY *= drag;
+      renderer.render(scene, camera);
+    }
+
+    animate();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
