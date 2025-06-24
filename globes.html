@@ -45,6 +45,71 @@
       text-decoration: underline;
     }
 
+    #map-buttons {
+  position: fixed;
+  top: 70px;
+  left: 10px;
+  display: flex;
+  gap: 8px;
+  z-index: 10;
+  background: rgba(0,0,0,0.6);
+  padding: 6px 10px;
+  border-radius: 8px;
+  align-items: center;
+}
+
+/* EDIT THIS to make buttons bigger */
+#map-buttons button {
+  border: 2px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  border-radius: 6px;
+  transition: border-color 0.3s;
+  width: 180px;   /* ← change width here */
+  height: 120px;  /* ← change height here */
+  overflow: hidden;
+}
+
+#map-buttons button.selected {
+  border-color: #0ff;
+}
+
+#map-buttons button img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none; /* so clicks go to button */
+}
+
+
+    #description {
+      position: fixed;
+      bottom: 10px;
+      left: 10px;
+      background-color: black;
+      color: #0ff;
+      padding: 12px 16px;
+      border-radius: 12px;
+      max-width: 300px;
+      font-size: 15px;
+      line-height: 1.4;
+      z-index: 10;
+      user-select: none;
+    }
+
+    #corner-image {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      width: 1200px;
+      height: auto;
+      border-radius: 12px;
+      opacity: 0.8;
+      z-index: 9;
+      pointer-events: none;
+    }
+
     #sensitivity-slider {
       position: absolute;
       top: 70px;
@@ -52,15 +117,6 @@
       background: rgba(0, 0, 0, 0.5);
       padding: 8px;
       border-radius: 8px;
-      z-index: 10;
-    }
-
-    #globe-selector {
-      position: absolute;
-      top: 70px;
-      left: 10px;
-      padding: 6px;
-      border-radius: 6px;
       z-index: 10;
     }
 
@@ -105,14 +161,30 @@
       <a href="globes.html">Globes</a>
       <a href="facts.html">Facts</a>
       <a href="credits.html">Credits</a>
+      <a href="game.html">Game</a>
     </nav>
   </header>
 
-  <select id="globe-selector">
-    <option value="globe1.jpg">Normal Earth</option>
-    <option value="globe2.jpg">Clean Water Access</option>
-    <option value="globe3.jpg">Ocean Hotspots</option>
-  </select>
+  <div id="map-buttons">
+    <button data-texture="globe1.jpg" class="selected" title="Normal Earth">
+      <img src="globes/globe1.jpg" alt="Normal Earth" />
+    </button>
+    <button data-texture="globe2.jpg" title="Clean Water Access">
+      <img src="globes/globe2.jpg" alt="Clean Water Access" />
+    </button>
+    <button data-texture="globe3.jpg" title="Ocean Hotspots">
+      <img src="globes/globe3.jpg" alt="Ocean Hotspots" />
+    </button>
+  </div>
+
+  <div id="description">
+    1. Normal Earth: A view of the Earth with no overlays.<br />
+    2. Clean Water Access: Highlights areas with clean water access.<br />
+    3. Ocean Hotspots: A map showing the busiest shipping lanes on Earth. <br />
+    The image on the right shows density of shipping traffic in the world's oceans.
+  </div>
+
+  <img id="corner-image" src="globes/crop.jpg" alt="Corner Image" />
 
   <div id="sensitivity-slider">
     <label for="sens">Sensitivity:</label>
@@ -157,11 +229,16 @@
       sensitivity = parseFloat(e.target.value);
     });
 
-    // Globe selector
-    document.getElementById('globe-selector').addEventListener('change', e => {
-      const newTexture = textureLoader.load('globes/' + e.target.value);
-      globeMaterial.map = newTexture;
-      globeMaterial.needsUpdate = true;
+    // Map buttons
+    const buttons = document.querySelectorAll('#map-buttons button');
+    buttons.forEach(button => {
+      button.addEventListener('click', () => {
+        buttons.forEach(b => b.classList.remove('selected'));
+        button.classList.add('selected');
+        const newTexture = textureLoader.load('globes/' + button.dataset.texture);
+        globeMaterial.map = newTexture;
+        globeMaterial.needsUpdate = true;
+      });
     });
 
     // Drag
